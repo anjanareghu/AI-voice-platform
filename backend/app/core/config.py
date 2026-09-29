@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     callmissed_chat_model: str = "gpt-oss-120b"
     callmissed_image_model: str = "flux-2-klein-9b"
     callmissed_image_size: str = "1024x1024"
+    callmissed_voice_system_prompt: str = (
+        "You are a helpful voice assistant. Keep replies brief and clear."
+    )
+    callmissed_voice: str = "shubh"
+    callmissed_voice_language: str = "en-IN"
+    callmissed_voice_max_duration_seconds: int = Field(default=300, ge=30, le=3600)
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
 
 

@@ -1,6 +1,7 @@
 import base64
 import binascii
 import logging
+from uuid import UUID
 
 import httpx
 from pydantic import ValidationError
@@ -9,6 +10,7 @@ from app.core.config import Settings
 from app.core.errors import AppError
 from app.schemas.chat import ChatResponse
 from app.schemas.image import ImageResponse
+from app.schemas.voice import VoiceSessionResponse
 
 
 logger = logging.getLogger(__name__)
@@ -153,3 +155,99 @@ class CallMissedService:
                 "The AI service returned an invalid image. Please try again.",
                 502,
             ) from None
+
+    async def create_voice_session(self) -> VoiceSessionResponse:
+        headers = self._authorization_headers("voice")
+        try:
+            response = await self.client.post(
+                f"{self.settings.callmissed_base_url.rstrip('/')}/voice/sessions",
+                headers=headers,
+                json={
+                    "system_prompt": self.settings.callmissed_voice_system_prompt,
+                    "voice": self.settings.callmissed_voice,
+                    "language": self.settings.callmissed_voice_language,
+                    "max_duration_seconds": self.settings.callmissed_voice_max_duration_seconds,
+                },
+            )
+        except httpx.TimeoutException:
+            logger.warning("CallMissed voice session creation timed out")
+            raise AppError(
+                "AI_SERVICE_TIMEOUT", "Voice session creation timed out. Please try again.", 504
+            ) from None
+        except httpx.RequestError:
+            logger.warning("CallMissed voice session creation network failure")
+            raise AppError(
+                "AI_SERVICE_UNAVAILABLE",
+                "Voice sessions are temporarily unavailable. Please try again.",
+                502,
+            ) from None
+
+        self._check_voice_status(response.status_code, "creation", expected=201)
+        try:
+            data = response.json()
+            session = VoiceSessionResponse.model_validate(
+                {
+                    "session_id": data["id"],
+                    "ws_url": data["ws_url"],
+                    "token": data["token"],
+                }
+            )
+            api_key = self.settings.callmissed_api_key
+            if api_key and session.token == api_key.get_secret_value():
+                raise ValueError("Provider returned permanent API key")
+        except (ValueError, TypeError, KeyError, ValidationError):
+            logger.error("CallMissed voice session creation returned an invalid response")
+            raise AppError(
+                "AI_SERVICE_UNAVAILABLE",
+                "The voice service returned an invalid response. Please try again.",
+                502,
+            ) from None
+
+        return session
+
+    async def end_voice_session(self, session_id: UUID) -> None:
+        headers = self._authorization_headers("voice")
+        try:
+            response = await self.client.delete(
+                f"{self.settings.callmissed_base_url.rstrip('/')}/voice/sessions/{session_id}",
+                headers=headers,
+            )
+        except httpx.TimeoutException:
+            logger.warning("CallMissed voice session termination timed out")
+            raise AppError(
+                "AI_SERVICE_TIMEOUT", "Voice session termination timed out.", 504
+            ) from None
+        except httpx.RequestError:
+            logger.warning("CallMissed voice session termination network failure")
+            raise AppError(
+                "AI_SERVICE_UNAVAILABLE",
+                "Voice session termination is temporarily unavailable.",
+                502,
+            ) from None
+
+        self._check_voice_status(response.status_code, "termination", expected=204)
+
+    @staticmethod
+    def _check_voice_status(status_code: int, operation: str, expected: int) -> None:
+        if status_code == expected:
+            return
+        logger.warning(
+            "CallMissed voice session %s failed",
+            operation,
+            extra={"upstream_status": status_code},
+        )
+        if status_code == 429:
+            raise AppError(
+                "AI_RATE_LIMITED", "Voice sessions are busy. Please try again shortly.", 429
+            )
+        if operation == "termination" and status_code == 404:
+            raise AppError("VOICE_SESSION_NOT_FOUND", "Voice session not found.", 404)
+        if status_code == 402:
+            raise AppError("AI_SERVICE_UNAVAILABLE", "Voice sessions are unavailable.", 503)
+        if status_code in (400, 401, 403):
+            raise AppError("AI_NOT_CONFIGURED", "Voice sessions are unavailable.", 503)
+        raise AppError(
+            "AI_SERVICE_UNAVAILABLE",
+            "Voice sessions are temporarily unavailable. Please try again.",
+            502,
+        )

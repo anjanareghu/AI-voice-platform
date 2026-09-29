@@ -9,6 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.chat import router as chat_router
 from app.api.images import router as images_router
+from app.api.voice import router as voice_router
 from app.core.config import Settings, get_settings
 from app.core.errors import (
     AppError,
@@ -45,7 +46,7 @@ def create_app(
         CORSMiddleware,
         allow_origins=config.cors_origins,
         allow_credentials=False,
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["Content-Type"],
     )
     app.add_exception_handler(AppError, app_error_handler)
@@ -54,6 +55,7 @@ def create_app(
     app.add_exception_handler(Exception, unexpected_error_handler)
     app.include_router(chat_router)
     app.include_router(images_router)
+    app.include_router(voice_router)
 
     @app.get("/health")
     async def health() -> dict[str, str]:
