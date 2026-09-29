@@ -6,26 +6,21 @@ import ImagePanel from './features/image/ImagePanel.jsx'
 const VoicePanel = lazy(() => import('./features/voice/VoicePanel.jsx'))
 
 const sections = [
-  { id: 'chat', label: 'Chat', hint: 'Think together', icon: 'chat' },
-  { id: 'image', label: 'Generate', hint: 'Make an image', icon: 'image' },
-  { id: 'voice', label: 'Voice', hint: 'Speak naturally', icon: 'voice' },
+  { id: 'chat', label: 'Chat', icon: 'chat' },
+  { id: 'image', label: 'Generate', icon: 'image' },
+  { id: 'voice', label: 'Voice', icon: 'voice' },
 ]
 
 const pageCopy = {
-  chat: {
-    eyebrow: 'TEXT WORKSPACE',
-    title: 'A space to think out loud.',
-    subtitle: 'Ask a question, explore an idea, or get a fresh perspective.',
-  },
   image: {
     eyebrow: 'IMAGE STUDIO',
-    title: 'Turn a thought into an image.',
-    subtitle: 'Describe what you have in mind and see it take shape.',
+    title: 'Imagine it. Then see it.',
+    subtitle: 'Give your idea a shape, a setting, and a little atmosphere.',
   },
   voice: {
-    eyebrow: 'VOICE SESSION',
-    title: 'Have a conversation.',
-    subtitle: 'Speak naturally and hear an answer in real time.',
+    eyebrow: 'VOICE STUDIO',
+    title: 'Let’s talk it through.',
+    subtitle: 'A natural conversation, one idea at a time.',
   },
 }
 
@@ -42,13 +37,12 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <div className="app-frame">
+      <header className="topbar">
         <div className="brand" aria-label="AI Workspace">
-          <span className="brand-mark" aria-hidden="true"><span /></span>
-          <span className="brand-name">AI Workspace</span>
+          <span className="brand-mark" aria-hidden="true">✳</span>
+          <span className="brand-name">aura<span className="brand-period">.</span></span>
         </div>
-
-        <div className="sidebar-label">WORKSPACES</div>
         <nav className="section-nav" aria-label="Workspaces">
           {sections.map((section) => (
             <button
@@ -59,29 +53,21 @@ export default function App() {
               aria-current={active === section.id ? 'page' : undefined}
             >
               <span className="nav-icon"><SectionIcon name={section.icon} /></span>
-              <span className="nav-copy"><strong>{section.label}</strong><small>{section.hint}</small></span>
+              <span className="nav-copy"><strong>{section.label}</strong></span>
             </button>
           ))}
         </nav>
 
-        <div className="sidebar-foot">
-          <span className="foot-dot" aria-hidden="true" />
-          <span>One place for every idea</span>
-        </div>
-      </aside>
+        <div className="topbar-status"><span className="status-spark" aria-hidden="true">✦</span><span>Made for curiosity</span></div>
+      </header>
 
       <main className="main-area">
-        <header className="topbar">
-          <div className="breadcrumb"><span>Workspace</span><span className="breadcrumb-sep">/</span><strong>{sections.find((item) => item.id === active).label}</strong></div>
-          <span className="topbar-tag">AI INTERACTION PLATFORM</span>
-        </header>
-
-        <div className="content-wrap">
-          <div className="page-heading">
+        <div className={`content-wrap ${active === 'chat' ? 'chat-content' : ''}`}>
+          {active !== 'chat' && <div className="page-heading">
             <span className="eyebrow">{copy.eyebrow}</span>
             <h1>{copy.title}</h1>
             <p>{copy.subtitle}</p>
-          </div>
+          </div>}
 
           <div className="workspace-frame">
             <div hidden={active !== 'chat'} className="panel-holder"><ChatPanel /></div>
@@ -90,6 +76,8 @@ export default function App() {
           </div>
         </div>
       </main>
+      <footer className="site-footer"><span>AI Workspace</span><span>Make room for what’s next.</span></footer>
+      </div>
     </div>
   )
 }

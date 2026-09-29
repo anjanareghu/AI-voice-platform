@@ -20,6 +20,23 @@ describe('ChatPanel', () => {
     expect(screen.getByText('Hello')).toBeInTheDocument()
   })
 
+  it('renders an assistant Markdown table with formatted cells', async () => {
+    sendChat.mockResolvedValue({ message: '**ChatGPT overview**\n\n| Aspect | What it means |\n| --- | --- |\n| **Full name** | Chat Generative Pre-trained Transformer |\n| Capabilities | Answer questions<br>Write prose |' })
+    const user = userEvent.setup()
+    render(<ChatPanel />)
+
+    await user.type(screen.getByRole('textbox', { name: 'Your message' }), 'What is ChatGPT?{enter}')
+
+    const table = await screen.findByRole('table')
+    expect(table).toHaveTextContent('Full name')
+    expect(screen.getByRole('columnheader', { name: 'Aspect' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'What it means' })).toBeInTheDocument()
+    expect(screen.getByText('ChatGPT overview').tagName).toBe('STRONG')
+    expect(screen.getByText('Full name').tagName).toBe('STRONG')
+    expect(table.querySelector('br')).toBeInTheDocument()
+    expect(screen.queryByText('| --- | --- |')).not.toBeInTheDocument()
+  })
+
   it('retries a failed message without duplicating it', async () => {
     sendChat.mockRejectedValueOnce(new Error('Service unavailable')).mockResolvedValueOnce({ message: 'Recovered' })
     const user = userEvent.setup()
