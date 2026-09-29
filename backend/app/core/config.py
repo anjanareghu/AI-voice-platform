@@ -22,7 +22,9 @@ class Settings(BaseSettings):
     callmissed_voice: str = "shubh"
     callmissed_voice_language: str = "en-IN"
     callmissed_voice_max_duration_seconds: int = Field(default=300, ge=30, le=3600)
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    cors_origins: list[str] = Field(
+        default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
+    )
 
 
 @lru_cache
